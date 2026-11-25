@@ -18,6 +18,6 @@ typedef struct
 void touchpad_init(void);
 void touchpad_reset_tracking(void);
 void touchpad_update(uint16_t keys_held, const touchPosition *tp, int sensitivity, TouchpadOutput *out);
-void touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching);
+bool touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching);
 
 #endif /* DSPICO_HID_TOUCHPAD_H */

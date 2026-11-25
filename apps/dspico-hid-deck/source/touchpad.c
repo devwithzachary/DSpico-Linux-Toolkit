@@ -39,6 +39,9 @@ static int sScrollAccum = 0;
 static uint8_t sPrevButtons = 0;
 static int sPrevTouchCursorX = -1;
 static int sPrevTouchCursorY = -1;
+static int sPrevScrollY = -1;
+static uint8_t sPrevBtnMask = 0xFF;
+static bool sRenderDirty = true;
 
 static int clamp_i8(int v)
 {
@@ -68,6 +71,9 @@ void touchpad_reset_tracking(void)
     sPrevButtons = 0;
     sPrevTouchCursorX = -1;
     sPrevTouchCursorY = -1;
+    sPrevScrollY = -1;
+    sPrevBtnMask = 0xFF;
+    sRenderDirty = true;
 }
 
 static bool point_in(int px, int py, int x, int y, int w, int h)
@@ -221,8 +227,42 @@ void touchpad_update(uint16_t keys_held, const touchPosition *tp, int sensitivit
     sPrevButtons = btns;
 }
 
-void touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching)
+bool touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching)
 {
+    int dot_x = -1;
+    int dot_y = -1;
+    if (touching && point_in(tp->px, tp->py, PAD_X + 3, PAD_Y + 3, PAD_W - 6, PAD_H - 6))
+    {
+        dot_x = tp->px;
+        dot_y = tp->py;
+    }
+
+    int scrl_y = -1;
+    if (touching && point_in(tp->px, tp->py, SCROLL_X, SCROLL_Y, SCROLL_W, SCROLL_H))
+    {
+        scrl_y = tp->py;
+    }
+
+    bool l_hit = touching && point_in(tp->px, tp->py, BTN_L_X, BTN_Y, BTN_L_W, BTN_H);
+    bool m_hit = touching && point_in(tp->px, tp->py, BTN_M_X, BTN_Y, BTN_M_W, BTN_H);
+    bool r_hit = touching && point_in(tp->px, tp->py, BTN_R_X, BTN_Y, BTN_R_W, BTN_H);
+    uint8_t btn_mask = (uint8_t)((l_hit ? 1u : 0u) | (m_hit ? 2u : 0u) | (r_hit ? 4u : 0u));
+
+    if (!sRenderDirty &&
+        dot_x == sPrevTouchCursorX &&
+        dot_y == sPrevTouchCursorY &&
+        scrl_y == sPrevScrollY &&
+        btn_mask == sPrevBtnMask)
+    {
+        return false;
+    }
+
+    sPrevTouchCursorX = dot_x;
+    sPrevTouchCursorY = dot_y;
+    sPrevScrollY = scrl_y;
+    sPrevBtnMask = btn_mask;
+    sRenderDirty = false;
+
     ui_fill_rect(sub_fb, 0, 22, 256, 170, UI_C_BG);
 
     /* Touchpad surface */
@@ -231,16 +271,9 @@ void touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching)
     ui_draw_text(sub_fb, PAD_X + 8, PAD_Y + 20, "Drag=Move  Tap=Click", UI_C_MUTED);
 
     /* Subtle crosshair dot on touchpad */
-    if (touching && point_in(tp->px, tp->py, PAD_X + 3, PAD_Y + 3, PAD_W - 6, PAD_H - 6))
+    if (dot_x >= 0)
     {
-        ui_fill_rect(sub_fb, tp->px - 2, tp->py - 2, 5, 5, UI_C_ACCENT);
-        sPrevTouchCursorX = tp->px;
-        sPrevTouchCursorY = tp->py;
-    }
-    else
-    {
-        sPrevTouchCursorX = -1;
-        sPrevTouchCursorY = -1;
+        ui_fill_rect(sub_fb, dot_x - 2, dot_y - 2, 5, 5, UI_C_ACCENT);
     }
 
     /* Scroll strip */
@@ -250,16 +283,12 @@ void touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching)
     {
         ui_fill_rect(sub_fb, SCROLL_X + 8, gy, SCROLL_W - 16, 2, UI_C_BORDER);
     }
-    if (touching && point_in(tp->px, tp->py, SCROLL_X, SCROLL_Y, SCROLL_W, SCROLL_H))
+    if (scrl_y >= 0)
     {
-        ui_fill_rect(sub_fb, SCROLL_X + 4, tp->py - 3, SCROLL_W - 8, 6, UI_C_ACCENT);
+        ui_fill_rect(sub_fb, SCROLL_X + 4, scrl_y - 3, SCROLL_W - 8, 6, UI_C_ACCENT);
     }
 
     /* Mouse buttons */
-    bool l_hit = touching && point_in(tp->px, tp->py, BTN_L_X, BTN_Y, BTN_L_W, BTN_H);
-    bool m_hit = touching && point_in(tp->px, tp->py, BTN_M_X, BTN_Y, BTN_M_W, BTN_H);
-    bool r_hit = touching && point_in(tp->px, tp->py, BTN_R_X, BTN_Y, BTN_R_W, BTN_H);
-
     ui_draw_box(sub_fb, BTN_L_X, BTN_Y, BTN_L_W, BTN_H, l_hit ? UI_C_BTN_ACT : UI_C_BTN, UI_C_BORDER);
     ui_draw_text_centered(sub_fb, BTN_L_X, BTN_Y, BTN_L_W, BTN_H, "LEFT (A)", UI_C_TEXT);
 
@@ -268,4 +297,6 @@ void touchpad_render(u16 *sub_fb, const touchPosition *tp, bool touching)
 
     ui_draw_box(sub_fb, BTN_R_X, BTN_Y, BTN_R_W, BTN_H, r_hit ? UI_C_BTN_ACT : UI_C_BTN, UI_C_BORDER);
     ui_draw_text_centered(sub_fb, BTN_R_X, BTN_Y, BTN_R_W, BTN_H, "RIGHT (B)", UI_C_TEXT);
+
+    return true;
 }

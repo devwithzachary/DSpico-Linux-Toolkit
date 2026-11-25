@@ -48,10 +48,12 @@ static u8 sRespBufIdx = 0;
 static u8 sRespSeq = 0;
 
 /* Shared USB status flags (written by Core 0, read by ISR) */
+extern "C" volatile bool gLinuxSuiteActive = false;
 static volatile u8 sUsbStatusFlags = 0;
 static volatile bool sMounted = false;
 static volatile bool sSuspended = false;
 static volatile bool sCdcDtr = false;
+static bool sUsbInited = false;
 static volatile u64 sRedLedUntilUs = 0;
 static volatile u64 sBlueLedUntilUs = 0;
 
@@ -112,6 +114,7 @@ extern "C" void __time_critical_func(ntrc_gameLinuxSuiteCmd0)(ntr_rom_emu_t* rom
 
 extern "C" void __time_critical_func(ntrc_gameLinuxSuiteCmd1)(ntr_rom_emu_t* romEmu, u32 word, pio_hw_t* pio)
 {
+    gLinuxSuiteActive = true;
     u32 cmd0 = romEmu->cmd0;
     u32 cmd1 = word;
 
@@ -310,37 +313,38 @@ extern "C" void dspico_linux_init(void)
     gpio_init(PIN_LED_BLUE);
     gpio_set_dir(PIN_LED_BLUE, GPIO_OUT);
     gpio_put(PIN_LED_BLUE, 0);
-
-    tusb_init();
 }
 
 static void serviceCdc(void)
 {
     /* Drain DS -> Host CDC TX */
-    u32 availWrite = tud_cdc_write_available();
-    if (availWrite > 0)
+    if (sTxHead != sTxTail)
     {
-        u32 head = sTxHead;
-        __dmb();
-        u32 tail = sTxTail;
-        if (head != tail)
+        u32 availWrite = tud_cdc_write_available();
+        if (availWrite > 0)
         {
-            u8 tmp[64];
-            u32 count = 0;
-            u32 limit = (availWrite < sizeof(tmp)) ? availWrite : sizeof(tmp);
-            while (tail != head && count < limit)
-            {
-                tmp[count++] = sTxRing[tail];
-                tail = (tail + 1u) & TTY_TX_RING_MASK;
-            }
+            u32 head = sTxHead;
             __dmb();
-            sTxTail = tail;
-
-            if (count > 0)
+            u32 tail = sTxTail;
+            if (head != tail)
             {
-                tud_cdc_write(tmp, count);
-                tud_cdc_write_flush();
-                pulseRedLed(25000u);
+                u8 tmp[64];
+                u32 count = 0;
+                u32 limit = (availWrite < sizeof(tmp)) ? availWrite : sizeof(tmp);
+                while (tail != head && count < limit)
+                {
+                    tmp[count++] = sTxRing[tail];
+                    tail = (tail + 1u) & TTY_TX_RING_MASK;
+                }
+                __dmb();
+                sTxTail = tail;
+
+                if (count > 0)
+                {
+                    tud_cdc_write(tmp, count);
+                    tud_cdc_write_flush();
+                    pulseRedLed(25000u);
+                }
             }
         }
     }
@@ -464,7 +468,15 @@ static void updateLeds(void)
 
 extern "C" void dspico_linux_usb_task(void)
 {
-    tud_task();
+    if (!sUsbInited)
+    {
+        tusb_init();
+        sUsbInited = true;
+    }
+    if (tud_task_event_ready())
+    {
+        tud_task();
+    }
     if (sMounted && !sSuspended)
     {
         serviceCdc();
@@ -477,6 +489,7 @@ extern "C" void dspico_linux_usb_task(void)
 /* Keep host USB enumerated across DS cart resets; only reset ring buffers */
 extern "C" void ntrc_resetUsb(void)
 {
+    gLinuxSuiteActive = false;
     sRxHead = sRxTail;
     sTxHead = sTxTail;
     sHidHead = sHidTail;

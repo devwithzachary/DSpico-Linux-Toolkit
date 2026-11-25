@@ -117,11 +117,11 @@ void macro_deck_update(uint16_t keys_down, uint16_t keys_held, const touchPositi
     }
 }
 
-void macro_deck_render(u16 *sub_fb)
+bool macro_deck_render(u16 *sub_fb)
 {
     if (!sDirty)
     {
-        return;
+        return false;
     }
 
     ui_fill_rect(sub_fb, 0, 22, 256, 170, UI_C_BG);
@@ -141,4 +141,5 @@ void macro_deck_render(u16 *sub_fb)
     }
 
     sDirty = false;
+    return true;
 }

@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+extern volatile bool gLinuxSuiteActive;
+
 void dspico_linux_init(void);
 void dspico_linux_usb_task(void);
 

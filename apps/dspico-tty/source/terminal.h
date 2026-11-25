@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define TERM_COLS               32
-#define TERM_ROWS               24
+#define TERM_COLS               42
+#define TERM_ROWS               27
 #define TERM_SCROLLBACK_MAIN    120
 #define TERM_SCROLLBACK_EXP     8192
 

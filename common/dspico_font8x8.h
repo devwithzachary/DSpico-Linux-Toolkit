@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 /* Compact 8x8 monochrome bitmap font for ASCII 0x20..0x7E (95 chars).
- * Bit 7 = leftmost pixel, Bit 0 = rightmost pixel, 8 rows top-to-bottom.
+ * Bit 0 = leftmost pixel, Bit 7 = rightmost pixel, 8 rows top-to-bottom.
  */
 static const uint8_t dspico_font8x8[95][8] = {
     {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, /* ' ' */

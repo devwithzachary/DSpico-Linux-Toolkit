@@ -1,6 +1,6 @@
 #include "terminal.h"
 #include "dspico_bus.h"
-#include "dspico_font8x8.h"
+#include "dspico_font5x6.h"
 #include "exp_ram.h"
 
 #include <nds.h>
@@ -66,12 +66,22 @@ static int sSavedRow = 0;
 static int sSavedCol = 0;
 static int sScrollOffset = 0; /* 0 = live bottom, >0 = scrolled up */
 
+#define CELL_W          6
+#define CELL_H          7
+#define TERM_ORIGIN_X   2
+#define TERM_ORIGIN_Y   1
+
+static const uint16_t kTermBg = RGB15(1, 2, 4);
+
 static uint8_t sCurFg = 7;
 static bool sCurBold = false;
 static bool sCurReverse = false;
 static bool sDirty = true;
+static bool sForceRedraw = true;
 static uint32_t sFrameCounter = 0;
-static u16 *sMapPtr = NULL;
+static u16 *sTopFb = NULL;
+static uint16_t sDrawnCell[TERM_ROWS * TERM_COLS];
+static uint8_t sDrawnInv[TERM_ROWS * TERM_COLS];
 
 /* ANSI parser state */
 typedef enum
@@ -146,29 +156,23 @@ static uint8_t effective_fg(void)
     return fg;
 }
 
-static void upload_4bpp_font(u16 *tile_mem)
+static void draw_term_cell(int r, int c, uint8_t ch, uint8_t fg_idx, bool inv)
 {
-    for (int idx = 0; idx < 95; idx++)
-    {
-        u32 *dst_norm = (u32 *)(tile_mem + idx * 16);
-        u32 *dst_inv = (u32 *)(tile_mem + (idx + 96) * 16);
+    int x0 = TERM_ORIGIN_X + c * CELL_W;
+    int y0 = TERM_ORIGIN_Y + r * CELL_H;
+    u16 fg = (inv ? kTermBg : kAnsiColors[fg_idx]) | BIT(15);
+    u16 bg = (inv ? kAnsiColors[fg_idx] : kTermBg) | BIT(15);
+    const uint8_t *glyph = dspico_font5x6[ch - 0x20u];
 
-        for (int row = 0; row < 8; row++)
+    for (int py = 0; py < CELL_H; py++)
+    {
+        u16 *row_ptr = &sTopFb[(y0 + py) * 256 + x0];
+        uint8_t bits = (py < 6) ? glyph[py] : 0u;
+        for (int px = 0; px < 5; px++)
         {
-            uint8_t bits = dspico_font8x8[idx][row];
-            u32 word_norm = 0;
-            u32 word_inv = 0;
-            for (int col = 0; col < 8; col++)
-            {
-                bool on = (bits & (0x80u >> col)) != 0;
-                u32 pix_n = on ? 1u : 2u;
-                u32 pix_i = on ? 2u : 1u;
-                word_norm |= (pix_n << (col * 4));
-                word_inv |= (pix_i << (col * 4));
-            }
-            dst_norm[row] = word_norm;
-            dst_inv[row] = word_inv;
+            row_ptr[px] = (bits & (0x10u >> px)) ? fg : bg;
         }
+        row_ptr[5] = bg;
     }
 }
 
@@ -185,23 +189,18 @@ void terminal_init(void)
         sScrollbackCap = TERM_SCROLLBACK_MAIN;
     }
 
-    videoSetMode(MODE_0_2D);
+    videoSetMode(MODE_5_2D);
     vramSetBankA(VRAM_A_MAIN_BG);
 
-    int bg = bgInit(0, BgType_Text4bpp, BgSize_T_256x256, 0, 1);
-    sMapPtr = bgGetMapPtr(bg);
-    u16 *tile_mem = bgGetGfxPtr(bg);
+    int bg = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0, 0);
+    sTopFb = bgGetGfxPtr(bg);
 
-    upload_4bpp_font(tile_mem);
-
-    uint16_t bg_col = RGB15(1, 2, 4);
-    BG_PALETTE[0] = bg_col;
-    for (int p = 0; p < 16; p++)
+    u16 bg_px = kTermBg | BIT(15);
+    for (int i = 0; i < 256 * 192; i++)
     {
-        BG_PALETTE[p * 16 + 0] = bg_col;
-        BG_PALETTE[p * 16 + 1] = kAnsiColors[p];
-        BG_PALETTE[p * 16 + 2] = bg_col;
+        sTopFb[i] = bg_px;
     }
+    sForceRedraw = true;
 
     terminal_clear();
     terminal_render();
@@ -616,7 +615,7 @@ void terminal_tick_cursor(void)
 
 void terminal_render(void)
 {
-    if (!sDirty || !sMapPtr)
+    if (!sDirty || !sTopFb)
     {
         return;
     }
@@ -635,17 +634,19 @@ void terminal_render(void)
             {
                 ch = ' ';
             }
-            u16 tile = (u16)(ch - 0x20u);
             bool rev = (cell_attr(cell) & CELL_ATTR_REVERSE) != 0;
             bool is_cursor = (sScrollOffset == 0 && cursor_blink && r == sCursorRow && c == sCursorCol);
-            if (rev ^ is_cursor)
+            uint8_t inv = (rev ^ is_cursor) ? 1u : 0u;
+            int idx = r * TERM_COLS + c;
+            if (sForceRedraw || sDrawnCell[idx] != cell || sDrawnInv[idx] != inv)
             {
-                tile = (u16)(tile + 96u);
+                draw_term_cell(r, c, ch, cell_fg(cell), inv != 0);
+                sDrawnCell[idx] = cell;
+                sDrawnInv[idx] = inv;
             }
-            u16 pal = (u16)cell_fg(cell);
-            sMapPtr[r * 32 + c] = (u16)(tile | (pal << 12));
         }
     }
 
+    sForceRedraw = false;
     sDirty = false;
 }

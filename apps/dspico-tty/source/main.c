@@ -9,7 +9,6 @@
 
 int main(void)
 {
-    irqInit();
     irqEnable(IRQ_VBLANK);
 
     terminal_init();

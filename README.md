@@ -10,8 +10,8 @@ Open-source firmware and Nintendo DS / DSi / 3DS homebrew apps built for the [**
 
 ### 1. `dspico-tty` (Pocket Dual-Screen Linux Serial Terminal & Monitor)
 Turn any Nintendo DS, DS Lite, DSi, or 3DS (in DS/DSi mode) into a **USB CDC ACM serial console (`/dev/ttyACM0`)** for a Linux PC, Raspberry Pi, or homelab server:
-- **Top Screen**: Crisp `32x24` 8x8 tilemap terminal with `120`-line scrollback buffer in main RAM — automatically expands to **`8,192` lines** (`512 KB` in Slot-2 PSRAM) when a **DS Lite Memory Expansion Pak** is inserted (`8M PAK` badge in status bar) — plus `\r`/`\n`/`\b`/`\t` and 16-color ANSI/VT100 escape sequences (`neofetch`, `htop`, `dmesg`, SSH sessions).
-- **Bottom Screen**: Touch QWERTY keyboard with `SHF`, `CTL` toggle, `ESC`, `TAB`, `ENT`, `BK`, arrow keys, and 4 one-tap macros (`neofetch`, `htop`, `ls -la`, `Ctrl+C`).
+- **Top Screen**: Crisp `42x27` 5x6 bitmap font terminal with `120`-line scrollback buffer in main RAM — automatically expands to **`8,192` lines** (`512 KB` in Slot-2 PSRAM) when a **DS Lite Memory Expansion Pak** is inserted (`8M PAK` badge in status bar) — plus `\r`/`\n`/`\b`/`\t` and 16-color ANSI/VT100 escape sequences (`fastfetch`, `htop`, `dmesg`, SSH sessions).
+- **Bottom Screen**: Touch QWERTY keyboard with `SHF`, `CTL` toggle, `ESC`, `TAB`, `ENT`, `BK`, arrow keys, and 4 one-tap macros (`fastfetch`, `htop`, `ls -la`, `Ctrl+C`).
 - **Physical Controls**: `A` = Enter, `B` = Backspace, `X` = Tab, `Y` = Ctrl+C, D-Pad = Arrow keys, `L + Up/Down` = Line scroll, `L + Left/Right` = Page scroll (`20` lines), `L + B` = Jump to bottom, `START` = Toggle Local Echo, `SELECT` = Clear Screen.
 - **Hardware LEDs**: DSpico **Red LED** (`GPIO27`) pulses on DS -> Host TX & terminal BEL alerts (`\x07`); **Blue LED** (`GPIO28`) pulses on Host -> DS RX and blinks as a mounted heartbeat.
 
@@ -161,7 +161,7 @@ Grants non-root access to `/dev/ttyACM0`, creates `/dev/dspico-tty`, and prevent
 ```
 
 ### Start the `DSpico-TTY` Host Shell Bridge
-Option A — Interactive `24x32` PTY shell bridge (no root required once udev rules are installed):
+Option A — Interactive `27x42` PTY shell bridge (no root required once udev rules are installed):
 ```bash
 ./host/start_tty_bridge.sh --reconnect
 ```

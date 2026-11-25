@@ -2,7 +2,7 @@
 """
 DSpico-TTY Host PTY Bridge
 Bridges the DSpico USB CDC ACM serial port (/dev/dspico-tty or /dev/ttyACM0)
-to an interactive Linux shell inside a 24x32 PTY (matching the DS top screen).
+to an interactive Linux shell inside a 27x42 PTY (matching the DS top screen).
 """
 
 import argparse
@@ -160,8 +160,8 @@ def main() -> int:
         default=os.environ.get("SHELL", "/bin/bash"),
         help="Shell executable to spawn (default: $SHELL or /bin/bash)",
     )
-    parser.add_argument("--rows", type=int, default=24, help="Terminal rows (default: 24)")
-    parser.add_argument("--cols", type=int, default=32, help="Terminal columns (default: 32)")
+    parser.add_argument("--rows", type=int, default=27, help="Terminal rows (default: 27)")
+    parser.add_argument("--cols", type=int, default=42, help="Terminal columns (default: 42)")
     parser.add_argument(
         "--reconnect",
         action="store_true",

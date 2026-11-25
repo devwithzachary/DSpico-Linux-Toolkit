@@ -56,7 +56,7 @@ static bool sLastEcho = false;
 
 static const TouchKey kKeys[] = {
     /* Macro bar (y=22..42) */
-    {   2, 22, 61, 20, "neofetch", NULL, KEY_MACRO, 0, 0, "neofetch\n" },
+    {   2, 22, 61, 20, "fastfetch", NULL, KEY_MACRO, 0, 0, "fastfetch\n" },
     {  65, 22, 61, 20, "htop",     NULL, KEY_MACRO, 0, 0, "htop\n" },
     { 128, 22, 61, 20, "ls -la",   NULL, KEY_MACRO, 0, 0, "ls -la\n" },
     { 191, 22, 63, 20, "Ctrl+C",   NULL, KEY_MACRO, 0, 0, "\x03" },
@@ -117,7 +117,7 @@ static const TouchKey kKeys[] = {
     {  63, 162, 26, 27, "TAB", "TAB", KEY_SEQ, 0, 0, "\t" },
     {  91, 162, 55, 27, "SPACE", "SPACE", KEY_CHAR, ' ', ' ', NULL },
     { 148, 162, 20, 27, ".", ">", KEY_CHAR, '.', '>', NULL },
-    { 170, 162, 20, 27, "<", ",", KEY_CHAR, ',', '<', NULL },
+    { 170, 162, 20, 27, ",", "<", KEY_CHAR, ',', '<', NULL },
     { 192, 162, 15, 27, "^", "^", KEY_SEQ, 0, 0, "\x1b[A" },
     { 208, 162, 15, 27, "v", "v", KEY_SEQ, 0, 0, "\x1b[B" },
     { 224, 162, 15, 27, "<", "<", KEY_SEQ, 0, 0, "\x1b[D" },
@@ -174,7 +174,7 @@ static void draw_char(int x, int y, char ch, u16 col)
         uint8_t bits = glyph[r];
         for (int col_i = 0; col_i < 8; col_i++)
         {
-            if (bits & (0x80u >> col_i))
+            if (bits & (1u << col_i))
             {
                 int px = x + col_i;
                 if (px >= 0 && px < 256)

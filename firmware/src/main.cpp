@@ -369,6 +369,9 @@ int __time_critical_func(main)()
     #ifdef ENABLE_R4_MODE
         ntrc_gameR4Update();
     #endif
-        dspico_linux_usb_task();
+        if (gLinuxSuiteActive && gNtrRomEmu.mode == NTR_CARD_MODE_GAME_NO_SCRAMBLE)
+        {
+            dspico_linux_usb_task();
+        }
     }
 }

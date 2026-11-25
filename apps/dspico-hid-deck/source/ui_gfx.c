@@ -54,7 +54,7 @@ void ui_draw_char(u16 *fb, int x, int y, char ch, u16 col)
         uint8_t bits = glyph[r];
         for (int ci = 0; ci < 8; ci++)
         {
-            if (bits & (0x80u >> ci))
+            if (bits & (1u << ci))
             {
                 int px = x + ci;
                 if (px >= 0 && px < 256)
