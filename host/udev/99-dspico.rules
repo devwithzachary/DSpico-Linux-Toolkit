@@ -1,0 +1,10 @@
+# DSpico Linux Toolkit udev rules
+# Install to /etc/udev/rules.d/99-dspico.rules and run:
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# DSpico Linux Toolkit USB Composite Device (CDC ACM + HID Mouse/Keyboard/Media)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="d501", SYMLINK+="dspico-tty", MODE="0666", GROUP="dialout", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1209", ATTRS{idProduct}=="d501", MODE="0666", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+# Raspberry Pi RP2040 BOOTSEL mode (for picotool / flashing without root)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="0003", MODE="0666"
